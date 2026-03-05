@@ -6,61 +6,58 @@ def rk4_step(f, x, y, h):
     return y + (k1 + 3*k2 + 3*k3 + k4) / 6
 
 
-def adaptive_rk4(f, A, B, C, y0, h_min, h_max, eps):
-    # Определяем направление интегрирования
-    if C == A:
-        x_end = B
-        h = h_max
-    elif C == B:
-        x_end = A
-        h = -h_max
-    else:
-        raise ValueError("C должен быть равен A или B")
 
-    x = C
-    y = y0
+
+def adaptive_rk4(f, A, B, C, y0, h_min, eps):
+    h = (B - A) / 10.0
+    direction = 1 if C == A else -1
+    h *= direction
+
+    x = float(C)
+    y = float(y0)
+    x_end = B if C == A else A
 
     xs = [x]
     ys = [y]
 
-    # Основной цикл интегрирования
-    while abs(x - x_end) > 1e-12:  # пока не достигнем конца
-        # Корректировка шага, чтобы не выйти за границу
-        if (x + h - x_end) * h > 0:
+    while abs(x - x_end) > 1e-12:
+        dist = x_end - x
+
+        if (dist - h) * direction < h_min:
+            if abs(dist) <= 1.5 * h_min:
+                h = dist
+            elif abs(dist) < 2 * h_min:
+                h = dist / 2.0
+            else:
+                h = dist - h_min * direction
+
+        # Защита от перелёта
+        if (x + h - x_end) * direction > 0:
             h = x_end - x
 
-        # Полный шаг
-        y1 = rk4_step(f, x, y, h)
+        y1 = rk4_step(f, x, y, h)                    # один шаг h
+        hm = h / 2.0
+        y_half = rk4_step(f, x, y, hm)
+        y2 = rk4_step(f, x + hm, y_half, hm)         # два шага h/2
 
-        # Два половинных шага
-        y_half = rk4_step(f, x, y, h/2)
-        y2 = rk4_step(f, x + h/2, y_half, h/2)
-
-        error = abs(y2 - y1)
+        error = abs(y2 - y1) / 15.0
 
         if error <= eps:
-            # Шаг принимается
+            # Шаг принимается (берём более точное значение y2)
             x += h
             y = y2
-
             xs.append(x)
             ys.append(y)
-
-            # Попытка увеличить шаг
-            if error < eps/4 and abs(2*h) <= h_max:
-                h *= 2 if h > 0 else -2
         else:
-            # Уменьшаем шаг
-            h /= 2
+            # Пункт 3: делим шаг пополам
+            h /= 2.0
             if abs(h) < h_min:
-                print("Требуемая точность не достигнута.")
-                break
+                h = h_min * direction
 
     return xs, ys
 
-
 def f(x, y):
-    return x + y   # заменить на свою функцию
+    return x + y
 
 # A = 0
 # B = 1
