@@ -101,6 +101,7 @@ def adaptive_rk4(f, A, B, C, y0, h_min, eps, out):
 
 def main():
     # x+y: Точное решение: y = eˣ − x − 1
+    # x*y: Точное решение: y = e^(x²/2)
     # 2*x: Точное решение: y = x²
     with open("result", "w") as out:
         for A, B, C, Y_c, h_min, eps in file_reader("data2"):
